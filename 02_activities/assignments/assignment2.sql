@@ -223,26 +223,19 @@ When you have all of these components, you can run the update statement. */
 ALTER TABLE product_units
 ADD current_quantity INT;
 
-SELECT x.*
-
 UPDATE product_units
-SET current_quantity = x.quantity
 
-FROM
+SET current_quantity = 
 (
-	SELECT pu.product_id 
-	,COALESCE(quantity, 0) AS quantity
-	,product_name
-	,market_date 
-	,ROW_NUMBER() OVER( PARTITION BY pu.product_id ORDER BY market_date DESC) AS most_recent_quantity_count
-	,current_quantity
+	SELECT COALESCE(quantity, 0)
+	FROM vendor_inventory vi
+	WHERE vi.product_id = product_units.product_id
+	ORDER BY market_date DESC
+	 LIMIT 1
+)
 
-	FROM product_units pu
-	LEFT JOIN vendor_inventory vi
-	ON pu.product_id = vi.product_id 
-) AS x
-
-WHERE most_recent_quantity_count = 1
-ORDER BY market_date DESC, product_id ASC;
-
-
+ WHERE product_units.product_id IN 
+(
+	SELECT DISTINCT product_id
+	FROM vendor_inventory
+)
